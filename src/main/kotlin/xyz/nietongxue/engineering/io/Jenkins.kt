@@ -7,8 +7,23 @@ import com.cv4j.netdiscovery.core.domain.Request
 import com.cv4j.netdiscovery.core.parser.selector.Json
 import com.cv4j.netdiscovery.core.parser.selector.JsonPathSelector
 import xyz.nietongxue.engineering.model.Building
+import xyz.nietongxue.engineering.model.BuildingUnit
+import xyz.nietongxue.engineering.model.Team
+import xyz.nietongxue.engineering.model.jobSystemMapping
 import java.io.StringReader
 import java.util.*
+
+object Context {
+    //FIXME 线程安全
+    var buildings: MutableList<Building> = mutableListOf()
+
+    fun getBuildingUnits(): List<BuildingUnit> {
+        val byJobName = buildings.groupBy { it.buildingUnitName }
+        return byJobName.map { (bn, building) ->
+            BuildingUnit(jobSystemMapping.jobToSystem(bn), building.toTypedArray())
+        }
+    }
+}
 
 class MainPage {
     private val buildUnits = "buildUnits"
@@ -45,11 +60,11 @@ private fun jenkinsRequest(path: String): Request {
     )
 }
 
-class JobPage(private val name: String, private val url: String) {
+class JobPage(val name: String, val url: String) {
     private val buildingsKey = "buildingsKey"
     private val spider: Spider by lazy {
         val sp = Spider.create().request(
-            jenkinsRequest(url).putExtra("jobName",name)
+            jenkinsRequest(url).putExtra("jobName", name)
         )
         sp.parser { page ->
             val json: Json = page.getField(RESPONSE_JSON) as Json
@@ -74,18 +89,19 @@ class JobPage(private val name: String, private val url: String) {
 
 }
 
-class BuildingPage(private val jobName: String, private val number: Int, private val url: String) {
+class BuildingPage(val jobName: String, val number: Int, val url: String) {
     private val buildKey = "buildKey"
     private val spider: Spider by lazy {
         val sp = Spider.create().request(jenkinsRequest(url))
         sp.parser { page ->
             val json: Json = page.getField(RESPONSE_JSON) as Json
-            val result :String = json.select(JsonPathSelector("\$.result")).toString()
-            val time:Long = json.select(JsonPathSelector("\$.timestamp")).toString().toLong()
-            page.putField(buildKey, Building(jobName,number, Date(time),result))
+            val result: String = json.select(JsonPathSelector("\$.result")).toString()
+            val time: Long = json.select(JsonPathSelector("\$.timestamp")).toString().toLong()
+            page.putField(buildKey, Building(jobName, number, Date(time), result))
         }
         sp.pipeline {
-            println(it.get<Building>(buildKey))
+            //            println(it.get<Building>(buildKey))
+            Context.buildings.add(it.get<Building>(buildKey))
         }
         return@lazy sp
 
