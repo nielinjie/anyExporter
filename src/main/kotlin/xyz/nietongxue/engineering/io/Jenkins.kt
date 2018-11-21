@@ -13,13 +13,19 @@ import java.io.StringReader
 import java.util.*
 
 object Context {
-    //FIXME 线程安全
-    var buildings: MutableList<Building> = mutableListOf()
+    private var buildings: List<Building> = listOf()
+    fun append(building: Building) {
+        if (buildings.any {
+                it.duplicated(building)
+            }) return
+        this.buildings += (building)
+
+    }
 
     fun getBuildingUnits(): List<BuildingUnit> {
         val byJobName = buildings.groupBy { it.buildingUnitName }
         return byJobName.map { (bn, building) ->
-            BuildingUnit(JenkinsJobSystemMapping.jobToSystem(bn), building.toTypedArray())
+            BuildingUnit(JenkinsJobSystemMapping.buildUnitNameToSystem(bn), bn, building.toTypedArray())
         }
     }
 }
@@ -99,8 +105,7 @@ class BuildingPage(val jobName: String, val number: Int, val url: String) {
             page.putField(buildKey, Building(jobName, number, Date(time), result))
         }
         sp.pipeline {
-            //            println(it.get<Building>(buildKey))
-            Context.buildings.add(it.get<Building>(buildKey))
+            Context.append(it.get<Building>(buildKey))
         }
         return@lazy sp
 
