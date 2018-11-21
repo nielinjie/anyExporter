@@ -8,8 +8,7 @@ import com.cv4j.netdiscovery.core.parser.selector.Json
 import com.cv4j.netdiscovery.core.parser.selector.JsonPathSelector
 import xyz.nietongxue.engineering.model.Building
 import xyz.nietongxue.engineering.model.BuildingUnit
-import xyz.nietongxue.engineering.model.Team
-import xyz.nietongxue.engineering.model.jobSystemMapping
+import xyz.nietongxue.engineering.model.JenkinsJobSystemMapping
 import java.io.StringReader
 import java.util.*
 
@@ -20,7 +19,7 @@ object Context {
     fun getBuildingUnits(): List<BuildingUnit> {
         val byJobName = buildings.groupBy { it.buildingUnitName }
         return byJobName.map { (bn, building) ->
-            BuildingUnit(jobSystemMapping.jobToSystem(bn), building.toTypedArray())
+            BuildingUnit(JenkinsJobSystemMapping.jobToSystem(bn), building.toTypedArray())
         }
     }
 }
