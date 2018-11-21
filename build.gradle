@@ -26,6 +26,11 @@ dependencies {
     implementation 'com.cv4j.netdiscovery:netdiscovery-dsl:0.0.8'
 
 
+    implementation group: 'io.prometheus', name: 'simpleclient', version: '0.5.0'
+    implementation group: 'io.prometheus', name: 'simpleclient_pushgateway', version: '0.5.0'
+
+
+
 }
 processResources {
     from('src/main/resource')

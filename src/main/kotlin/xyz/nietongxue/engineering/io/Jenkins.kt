@@ -17,7 +17,10 @@ object Context {
     fun append(building: Building) {
         if (buildings.any {
                 it.duplicated(building)
-            }) return
+            }) {
+            //FIXME 有重复的应该代替，而不是忽略
+            return
+        }
         this.buildings += (building)
 
     }
