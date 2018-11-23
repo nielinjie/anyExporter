@@ -41,7 +41,6 @@ fun push (){
         val lastSuccess = Gauge.build()
             .name("my_batch_job_last_success").help("Last time my batch job succeeded, in unixtime.").register(registry)
         lastSuccess.setToCurrentTime()
-        lastSuccess.
     } finally {
         durationTimer.setDuration()
         val pg = PushGateway("pushgateway.juma.com:80")

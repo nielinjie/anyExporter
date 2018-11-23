@@ -22,7 +22,7 @@ data class System(val name: String, val team: Team)
 data class Team(val name: String)
 
 
-data class BuildingUnit(val system: System,val name: String, val buildings: Array<Building>) {
+data class BuildingUnit(val system: System, val name: String, val buildings: Array<Building>) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -45,9 +45,12 @@ data class BuildingUnit(val system: System,val name: String, val buildings: Arra
 
 }
 
-data class Building(val buildingUnitName: String, val number: Int, val time: Date, val result: String){
-    fun duplicated(b:Building) :Boolean{
-        return b.buildingUnitName == buildingUnitName && b.number == number
+data class BuildingId(val buildUnitName: String, val number: Int)
+
+data class Building(val buildingId: BuildingId, val time: Date, val result: String) {
+    fun duplicated(b: Building): Boolean {
+        return b.buildingId == buildingId
     }
 }
 
+data class BuildingIssues(val buildingId: BuildingId, val name: String, val high: Int, val normal: Int)

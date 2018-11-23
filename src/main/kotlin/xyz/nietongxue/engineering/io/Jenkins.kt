@@ -14,6 +14,7 @@ import java.util.*
 
 object Context {
     private var buildings: List<Building> = listOf()
+//    private var
     fun append(building: Building) {
         if (buildings.any {
                 it.duplicated(building)
