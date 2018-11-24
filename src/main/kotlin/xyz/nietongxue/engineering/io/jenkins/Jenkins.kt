@@ -36,45 +36,17 @@ object Context {
     }
 
     fun buildingEvents(): List<BuildingEvent> {
-        return buildings.map(BuildingEvent.Companion::fromBuidling)
+        return buildings.map(BuildingEvent.Companion::fromBuilding)
     }
 
     fun buildingIssueEvents(): List<BuildingIssuesEvent> {
         return buildingIssuesList.map { bi: BuildingIssues ->
             val building = buildings.find { building -> building.buildingId == bi.buildingId }
-            return@map building?.let { return@let BuildingIssuesEvent.fromBuidling(building, bi) }
+            return@map building?.let { return@let BuildingIssuesEvent.fromBuilding(building, bi) }
         }.filterNotNull()
 
     }
 
-}
-
-class MainPage {
-    private val buildUnits = "buildUnits"
-    private val spider: Spider by lazy {
-        val sp = Spider.create()
-        sp.request(
-            jenkinsRequest("http://10.101.0.205:8080/jenkins")
-        )
-        sp.parser { page ->
-            val json: Json = page.getField(RESPONSE_JSON) as Json
-            val jobs = json.selectList(JsonPathSelector("\$.jobs[*][\"name\",\"url\"]")).all()
-            page.putField(buildUnits, jobs.map {
-                Klaxon()
-                    .parse<JobPage>(it)
-            })
-        }
-        sp.pipeline {
-            (it.get(buildUnits) as List<JobPage>).forEach { jobPage ->
-                jobPage.run()
-            }
-        }
-        return@lazy sp
-    }
-
-    fun run() {
-        spider.run()
-    }
 }
 
 private fun jenkinsRequest(path: String): Request {
@@ -84,59 +56,56 @@ private fun jenkinsRequest(path: String): Request {
     )
 }
 
+class MainPage {
+    fun run() {
+        Spider.create().request(
+            jenkinsRequest("http://10.101.0.205:8080/jenkins")
+        ).parser { page ->
+            val json: Json = page.getField(RESPONSE_JSON) as Json
+            val jobs = json.selectList(JsonPathSelector("\$.jobs[*][\"name\",\"url\"]")).all()
+            jobs.map {
+                Klaxon()
+                    .parse<JobPage>(it)
+            }.forEach { jobPage ->
+                jobPage?.run()
+            }
+        }.run()
+    }
+}
+
+
 class JobPage(val name: String, val url: String) {
-    private val buildingsKey = "buildingsKey"
-    private val spider: Spider by lazy {
-        val sp = Spider.create().request(
-            jenkinsRequest(url).putExtra("jobName", name)
-        )
-        sp.parser { page ->
+    fun run() {
+        Spider.create().request(
+            jenkinsRequest(url)
+        ).parser { page ->
             val json: Json = page.getField(RESPONSE_JSON) as Json
             val buildings = json.selectList(JsonPathSelector("\$.builds[*][\"number\",\"url\"]")).all()
-            page.putField(buildingsKey, buildings.map {
+            buildings.map {
                 val j = Klaxon()
                     .parseJsonObject(StringReader(it))
                 return@map BuildingPage(name, j["number"] as Int, j["url"] as String)
-            })
-        }
-        sp.pipeline {
-            (it.get(buildingsKey) as List<BuildingPage>).forEach { buildPage ->
+            }.forEach { buildPage ->
                 buildPage.run()
             }
-        }
-        return@lazy sp
-    }
-
-    fun run() {
-        spider.run()
+        }.run()
     }
 
 }
 
 class BuildingPage(val jobName: String, val number: Int, val url: String) {
-    private val buildKey = "buildKey"
-    private val spider: Spider by lazy {
-        val sp = Spider.create().request(jenkinsRequest(url))
-        sp.parser { page ->
-            val json: Json = page.getField(RESPONSE_JSON) as Json
-            val result: String = json.select(JsonPathSelector("\$.result")).toString()
-            val time: Long = json.select(JsonPathSelector("\$.timestamp")).toString().toLong()
-            page.putField(buildKey, Building(BuildingId(jobName, number), Date(time), result))
-        }
-        sp.pipeline {
-            Context.appendBuilding(it.get<Building>(buildKey))
-
-        }
-        return@lazy sp
-
-    }
-
     fun run() {
-        spider.run()
+        Spider.create().request(jenkinsRequest(url))
+            .parser { page ->
+                val json: Json = page.getField(RESPONSE_JSON) as Json
+                val result: String = json.select(JsonPathSelector("\$.result")).toString()
+                val time: Long = json.select(JsonPathSelector("\$.timestamp")).toString().toLong()
+                Context.appendBuilding(Building(BuildingId(jobName, number), Date(time), result))
+            }.run()
     }
 }
 
-//class BuildingIssuePage(val jobName:String,val number:Int,val url:String){
+//class BuildingIssuePage(val jobName:String,val number:Int,val typeName:String ,val url:String){
 //    private val buildIssuesKey = "buildIssuesKey"
 //    private val spider: Spider by lazy {
 //        val sp = Spider.create().request(jenkinsRequest(url))
@@ -144,7 +113,7 @@ class BuildingPage(val jobName: String, val number: Int, val url: String) {
 //            val json: Json = page.getField(RESPONSE_JSON) as Json
 //            val result: String = json.select(JsonPathSelector("\$.result")).toString()
 //            val time: Long = json.select(JsonPathSelector("\$.timestamp")).toString().toLong()
-//            page.putField(buildIssuesKey, BuildingIssues(BuildingId(jobName, number), Date(time), result))
+//            page.putField(buildIssuesKey, BuildingIssues(BuildingId(jobName, number), typeName, ))
 //        }
 //        sp.pipeline {
 //            Context.appendBuilding(it.get<Building>(buildIssuesKey))

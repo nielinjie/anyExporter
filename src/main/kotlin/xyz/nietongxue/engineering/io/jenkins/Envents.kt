@@ -22,7 +22,7 @@ data class BuildingEvent(
     val result: String
 ) {
     companion object {
-        fun fromBuidling(building: Building): BuildingEvent {
+        fun fromBuilding(building: Building): BuildingEvent {
             val system = JenkinsJobSystemMapping.buildUnitNameToSystem(building.buildingId.buildUnitName)
             return with(building) {
                 BuildingEvent(
@@ -49,7 +49,7 @@ data class BuildingIssuesEvent(
     val normal: Int
 ) {
     companion object {
-        fun fromBuidling(building: Building, buildingIssues: BuildingIssues): BuildingIssuesEvent {
+        fun fromBuilding(building: Building, buildingIssues: BuildingIssues): BuildingIssuesEvent {
             val system = JenkinsJobSystemMapping.buildUnitNameToSystem(building.buildingId.buildUnitName)
             return with(building) {
                 BuildingIssuesEvent(
