@@ -3,6 +3,7 @@ package xyz.nietongxue.engineering.io.jenkins
 import com.beust.klaxon.Klaxon
 import com.cv4j.netdiscovery.core.Spider
 import com.cv4j.netdiscovery.core.config.Constant.RESPONSE_JSON
+import com.cv4j.netdiscovery.core.domain.Page
 import com.cv4j.netdiscovery.core.domain.Request
 import com.cv4j.netdiscovery.core.parser.selector.Json
 import com.cv4j.netdiscovery.core.parser.selector.JsonPathSelector
@@ -56,13 +57,14 @@ private fun jenkinsRequest(path: String): Request {
     )
 }
 
+fun Page.json() = this.getField(RESPONSE_JSON) as Json
+
 class MainPage {
     fun run() {
         Spider.create().request(
             jenkinsRequest("http://10.101.0.205:8080/jenkins")
         ).parser { page ->
-            val json: Json = page.getField(RESPONSE_JSON) as Json
-            val jobs = json.selectList(JsonPathSelector("\$.jobs[*][\"name\",\"url\"]")).all()
+            val jobs = page.json().jsonPath("""$.jobs[*]["name","url"]""").all()
             jobs.map {
                 Klaxon()
                     .parse<JobPage>(it)
@@ -79,8 +81,7 @@ class JobPage(val name: String, val url: String) {
         Spider.create().request(
             jenkinsRequest(url)
         ).parser { page ->
-            val json: Json = page.getField(RESPONSE_JSON) as Json
-            val buildings = json.selectList(JsonPathSelector("\$.builds[*][\"number\",\"url\"]")).all()
+            val buildings = page.json().jsonPath("""$.builds[*]["number","url"]""").all()
             buildings.map {
                 val j = Klaxon()
                     .parseJsonObject(StringReader(it))
@@ -97,9 +98,8 @@ class BuildingPage(val jobName: String, val number: Int, val url: String) {
     fun run() {
         Spider.create().request(jenkinsRequest(url))
             .parser { page ->
-                val json: Json = page.getField(RESPONSE_JSON) as Json
-                val result: String = json.select(JsonPathSelector("\$.result")).toString()
-                val time: Long = json.select(JsonPathSelector("\$.timestamp")).toString().toLong()
+                val result: String = page.json().jsonPath("\$.result").get()
+                val time: Long = page.json().jsonPath("\$.timestamp").get().toLong()
                 Context.appendBuilding(Building(BuildingId(jobName, number), Date(time), result))
             }.run()
     }
