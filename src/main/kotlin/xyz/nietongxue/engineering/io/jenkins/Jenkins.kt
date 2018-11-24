@@ -1,4 +1,4 @@
-package xyz.nietongxue.engineering.io
+package xyz.nietongxue.engineering.io.jenkins
 
 import com.beust.klaxon.Klaxon
 import com.cv4j.netdiscovery.core.Spider
@@ -6,18 +6,17 @@ import com.cv4j.netdiscovery.core.config.Constant.RESPONSE_JSON
 import com.cv4j.netdiscovery.core.domain.Request
 import com.cv4j.netdiscovery.core.parser.selector.Json
 import com.cv4j.netdiscovery.core.parser.selector.JsonPathSelector
-import xyz.nietongxue.engineering.model.Building
-import xyz.nietongxue.engineering.model.BuildingUnit
-import xyz.nietongxue.engineering.model.JenkinsJobSystemMapping
+import xyz.nietongxue.engineering.model.*
 import java.io.StringReader
 import java.util.*
 
 object Context {
     private var buildings: List<Building> = listOf()
-//    private var
-    fun append(building: Building) {
+    private var buildingIssuesList: List<BuildingIssues> = listOf()
+    //    private var
+    fun appendBuilding(building: Building) {
         if (buildings.any {
-                it.duplicated(building)
+                it.buildingId == building.buildingId
             }) {
             //FIXME 有重复的应该代替，而不是忽略
             return
@@ -26,12 +25,28 @@ object Context {
 
     }
 
-    fun getBuildingUnits(): List<BuildingUnit> {
-        val byJobName = buildings.groupBy { it.buildingUnitName }
-        return byJobName.map { (bn, building) ->
-            BuildingUnit(JenkinsJobSystemMapping.buildUnitNameToSystem(bn), bn, building.toTypedArray())
+    fun appendBuildingIssues(buildingIssues: BuildingIssues) {
+        if (buildingIssuesList.any {
+                it.buildingId == buildingIssues.buildingId
+            }) {
+            //FIXME 有重复的应该代替，而不是忽略
+            return
         }
+        this.buildingIssuesList += buildingIssues
     }
+
+    fun buildingEvents(): List<BuildingEvent> {
+        return buildings.map(BuildingEvent.Companion::fromBuidling)
+    }
+
+    fun buildingIssueEvents(): List<BuildingIssuesEvent> {
+        return buildingIssuesList.map { bi: BuildingIssues ->
+            val building = buildings.find { building -> building.buildingId == bi.buildingId }
+            return@map building?.let { return@let BuildingIssuesEvent.fromBuidling(building, bi) }
+        }.filterNotNull()
+
+    }
+
 }
 
 class MainPage {
@@ -106,10 +121,11 @@ class BuildingPage(val jobName: String, val number: Int, val url: String) {
             val json: Json = page.getField(RESPONSE_JSON) as Json
             val result: String = json.select(JsonPathSelector("\$.result")).toString()
             val time: Long = json.select(JsonPathSelector("\$.timestamp")).toString().toLong()
-            page.putField(buildKey, Building(jobName, number, Date(time), result))
+            page.putField(buildKey, Building(BuildingId(jobName, number), Date(time), result))
         }
         sp.pipeline {
-            Context.append(it.get<Building>(buildKey))
+            Context.appendBuilding(it.get<Building>(buildKey))
+
         }
         return@lazy sp
 
@@ -119,3 +135,25 @@ class BuildingPage(val jobName: String, val number: Int, val url: String) {
         spider.run()
     }
 }
+
+//class BuildingIssuePage(val jobName:String,val number:Int,val url:String){
+//    private val buildIssuesKey = "buildIssuesKey"
+//    private val spider: Spider by lazy {
+//        val sp = Spider.create().request(jenkinsRequest(url))
+//        sp.parser { page ->
+//            val json: Json = page.getField(RESPONSE_JSON) as Json
+//            val result: String = json.select(JsonPathSelector("\$.result")).toString()
+//            val time: Long = json.select(JsonPathSelector("\$.timestamp")).toString().toLong()
+//            page.putField(buildIssuesKey, BuildingIssues(BuildingId(jobName, number), Date(time), result))
+//        }
+//        sp.pipeline {
+//            Context.appendBuilding(it.get<Building>(buildIssuesKey))
+//        }
+//        return@lazy sp
+//
+//    }
+//
+//    fun run() {
+//        spider.run()
+//    }
+//}
