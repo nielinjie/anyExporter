@@ -47,10 +47,6 @@ data class BuildingUnit(val system: System, val name: String, val buildings: Arr
 
 data class BuildingId(val buildUnitName: String, val number: Int)
 
-data class Building(val buildingId: BuildingId, val time: Date, val result: String) {
-    fun duplicated(b: Building): Boolean {
-        return b.buildingId == buildingId
-    }
-}
+data class Building(val buildingId: BuildingId, val time: Date, val result: String)
 
 data class BuildingIssues(val buildingId: BuildingId, val name: String, val high: Int, val normal: Int)
